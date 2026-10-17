@@ -10,6 +10,8 @@
 
 主要环境为 iQOO 15 / OriginOS 6。四份固件的 ART 与 libcore 样本做过离线检查；未知布局会拒绝初始化，不能保证未来所有 ART 版本都兼容。
 
+启动时通过反射识别 Shader 复制方法，并处理 Shader 与 vivo 深色模式控制类中的 Java 方法，不绑定方法名、固件版本或 ART 地址。整套 DEX 的调用分析只用于离线对照，不在管理器启动时执行。ART 布局使用两个类的实例 JNI 方法交叉检查，避免静态方法的类初始化跳板造成误判。
+
 ## 构建
 
 Windows、Python 3、JDK 21、Android SDK build-tools 36.0.0、NDK 29、CMake 3.28+、Ninja。设置 `JAVA_HOME`、`ANDROID_HOME`，运行 `python build.py`。
@@ -20,4 +22,4 @@ Windows、Python 3、JDK 21、Android SDK build-tools 36.0.0、NDK 29、CMake 3.
 
 原有代码采用 GPL-3.0-only，Copyright (C) 2026 Axuan。第三方代码遵循各自许可证，见 [THIRD_PARTY.md](THIRD_PARTY.md)。
 
-版本 `v1.3.0`，包名 / 模块 ID：`vivo_miuix_shader_fix`。
+版本 `v1.3.1`，包名 / 模块 ID：`vivo_miuix_shader_fix`。

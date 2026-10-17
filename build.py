@@ -23,7 +23,7 @@ elif KIND=='shader':
     target=ROOT/'module/zygisk/arm64-v8a.so';target.parent.mkdir(exist_ok=True)
     shutil.copy2(BUILD/'libvivo_miuix_shader_fix.so',target)
     run(llvm(n)/('llvm-strip.exe' if WINDOWS else 'llvm-strip'),'--strip-all',target)
-    package_module('vivo-miuix-shader-fix-v1.3.0-arm64.zip')
+    package_module('vivo-miuix-shader-fix-v1.3.1-arm64.zip')
 elif KIND=='root':
     n=ndk('27.2.12479018');source=ROOT/'vendor/capstone-5.0.7'
     origin=json.loads((ROOT/'vendor/capstone-origin.json').read_text('utf-8'))

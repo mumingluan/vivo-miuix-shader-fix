@@ -12,7 +12,11 @@ public final class ShaderContractProbe {
         }
         if(targets.size()!=1)throw new AssertionError("Missing/ambiguous Shader shape: "+targets);
         System.out.println("target="+targets.get(0));
-        for(DexIndex.Ref ref:ShaderContracts.callers(files,targets.get(0)))System.out.println("caller="+ref);
+        for(DexIndex.Ref ref:ShaderContracts.callers(files,targets.get(0))) {
+            if(!ref.owner.equals("Landroid/graphics/Shader;")&&!ref.owner.equals("Lvivo/app/nightmode/NightModeController;"))
+                throw new AssertionError("Caller is outside the runtime reflection scope: "+ref);
+            System.out.println("caller="+ref);
+        }
         // Different target names must not be accidentally treated as equivalent.
         try{ShaderContracts.callers(files,new DexIndex.Ref(targets.get(0).owner,"missing-method-probe",targets.get(0).type));}
         catch(IOException expected){System.out.println("PASS target shape, actual call sites, missing target rejection");return;}

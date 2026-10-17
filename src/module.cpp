@@ -107,8 +107,8 @@ public:
     }
 };
 
-__attribute__((noinline)) jint probeFirst(JNIEnv *, jclass, jint value) { return value ^ 0x13579; }
-__attribute__((noinline)) jint probeSecond(JNIEnv *, jclass, jint value) { return value + 0x2468; }
+__attribute__((noinline)) jint probeFirst(JNIEnv *, jobject, jint value) { return value ^ 0x13579; }
+__attribute__((noinline)) jint probeSecond(JNIEnv *, jobject, jint value) { return value + 0x2468; }
 
 bool installed = false;
 bool check(JNIEnv *env, const char *step) {
@@ -165,12 +165,16 @@ bool install(JNIEnv *env) {
       env->DeleteLocalRef(probeName);
       if(!check(env,"layout probe load")||!probeClass)return false;
       if(env->RegisterNatives(probeClass,registrations,2)!=JNI_OK||!check(env,"register layout probes"))return false;
+      auto probeCtor=env->GetMethodID(probeClass,"<init>","()V");
+      if(!check(env,"layout witness constructor")||!probeCtor)return false;
+      auto probeObject=env->NewObject(probeClass,probeCtor);
+      if(!check(env,"layout witness construction")||!probeObject)return false;
       for (size_t i = 0; i < 2; ++i) {
-        auto id = env->GetStaticMethodID(probeClass, registrations[i].name, registrations[i].signature);
+        auto id = env->GetMethodID(probeClass, registrations[i].name, registrations[i].signature);
         if (!check(env, "native probe lookup") || !id) return false;
-        auto value = env->CallStaticIntMethod(probeClass, id, jint(7));
+        auto value = env->CallIntMethod(probeObject, id, jint(7));
         if (!check(env, "native probe invocation") || value != (i == 0 ? (7 ^ 0x13579) : (7 + 0x2468))) return false;
-        probes[group*2+i] = {env->ToReflectedMethod(probeClass, id, true), registrations[i].fnPtr,
+        probes[group*2+i] = {env->ToReflectedMethod(probeClass, id, false), registrations[i].fnPtr,
                      reinterpret_cast<void *>(quick),probeClass};
         if (!check(env, "native probe reflection") || !probes[group*2+i].reflected_method) return false;
       }

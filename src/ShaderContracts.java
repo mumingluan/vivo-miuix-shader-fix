@@ -3,7 +3,7 @@ import java.io.*;
 import java.lang.reflect.*;
 import java.util.*;
 
-/** Discovers the Shader contract and exact boot-framework callers, independent of OEM method names. */
+/** Bounded runtime reflection; DEX call-site discovery below is for offline checks only. */
 public final class ShaderContracts {
     private ShaderContracts() { }
     static Method target(Class<?> shader) throws NoSuchMethodException {
@@ -43,25 +43,28 @@ public final class ShaderContracts {
         if(result.isEmpty())throw new IOException("No boot-framework callers of discovered Shader contract");
         return new ArrayList<>(result);
     }
-    public static Object[] discover()throws Exception {
-        Class<?> shader=Class.forName("android.graphics.Shader");Method target=target(shader);
-        DexIndex.Ref ref=new DexIndex.Ref("Landroid/graphics/Shader;",target.getName(),"(Z)Landroid/graphics/Shader;");
-        Set<File> files=new LinkedHashSet<>();
-        for(String paths:Arrays.asList(System.getenv("BOOTCLASSPATH"),System.getProperty("java.boot.class.path"))) {
-            if(paths==null)continue;
-            for(String path:paths.split(java.util.regex.Pattern.quote(File.pathSeparator))) {
-                File file=new File(path);if(file.isFile())files.add(file.getCanonicalFile());
+    static List<Member> runtimeCallers(Class<?> shader,Class<?> controller)throws ReflectiveOperationException {
+        List<Member> methods=new ArrayList<>();
+        // These framework class names are stable across the four stock samples.
+        // Deoptimize the bounded classes rather than parsing the boot classpath
+        // before ActivityThread has attached (which can exceed its start timeout).
+        for(Class<?> owner:new Class<?>[]{shader,controller}) {
+            Method[] declared=owner.getDeclaredMethods();
+            if(declared.length==0||declared.length>512)
+                throw new NoSuchMethodException("Unexpected Shader caller class size");
+            for(Method method:declared) {
+                if(Modifier.isNative(method.getModifiers())||Modifier.isAbstract(method.getModifiers()))continue;
+                methods.add(method);
             }
         }
-        if(files.isEmpty())throw new IOException("No readable boot classpath archives");
-        List<Member> methods=new ArrayList<>();
-        for(DexIndex.Ref caller:callers(new ArrayList<>(files),ref)) {
-            Class<?> owner=type(caller.owner,shader.getClassLoader());Class<?>[] parameters=parameters(caller.type,shader.getClassLoader());
-            if(caller.name.equals("<init>"))methods.add(owner.getDeclaredConstructor(parameters));
-            else if(!caller.name.equals("<clinit>"))methods.add(owner.getDeclaredMethod(caller.name,parameters));
-        }
-        if(methods.isEmpty())throw new IOException("No deoptimizable Shader caller members");
-        return new Object[]{target,methods.toArray(new Member[0])};
+        if(methods.isEmpty())throw new NoSuchMethodException("No deoptimizable Shader caller members");
+        return methods;
+    }
+    public static Object[] discover()throws Exception {
+        Class<?> shader=Class.forName("android.graphics.Shader",false,null);
+        Method target=target(shader);
+        Class<?> controller=Class.forName("vivo.app.nightmode.NightModeController",false,shader.getClassLoader());
+        return new Object[]{target,runtimeCallers(shader,controller).toArray(new Member[0])};
     }
     private static Class<?>[] parameters(String descriptor,ClassLoader loader)throws ClassNotFoundException {
         List<Class<?>> result=new ArrayList<>();int index=1;

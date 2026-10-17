@@ -1,6 +1,6 @@
 id=vivo_miuix_shader_fix
 name=vivo Miuix Shader Fix
-version=v1.3.0
-versionCode=4
+version=v1.3.1
+versionCode=5
 author=Axuan
 description=Preserves RuntimeShader copies in com.android.shell on vivo, fixing Miuix parasitic manager dark-mode corners and glass. Requires Zygisk. arm64.

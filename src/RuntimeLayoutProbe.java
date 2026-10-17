@@ -1,8 +1,8 @@
 package com.axuan.vivomiuix;
 
-/** Two ordinary JNI methods with distinct registered native implementations. */
+/** Instance JNI witnesses avoid static class-initialization resolution stubs. */
 public final class RuntimeLayoutProbe {
-    private RuntimeLayoutProbe() {}
-    public static native int first(int value);
-    public static native int second(int value);
+    public RuntimeLayoutProbe() {}
+    public native int first(int value);
+    public native int second(int value);
 }
