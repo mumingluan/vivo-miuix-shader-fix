@@ -1,0 +1,7 @@
+{
+  "artifact": "io.github.vvb2060.ndk:dobby:1.2",
+  "url": "https://repo.maven.apache.org/maven2/io/github/vvb2060/ndk/dobby/1.2/dobby-1.2.aar",
+  "sha256": "251f48ae21686d7f69276c50644ca345f450e45110057437f7d76bb14cddf3a1",
+  "source": "https://github.com/vvb2060/dobby-android",
+  "license": "Apache-2.0"
+}
