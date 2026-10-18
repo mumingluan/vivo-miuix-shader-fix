@@ -228,6 +228,39 @@ bool install(JNIEnv *env) {
     return true;
 }
 
+jboolean deferredInitialize(JNIEnv *env, jclass) { return install(env) ? JNI_TRUE : JNI_FALSE; }
+void deferredReport(JNIEnv *env, jclass, jstring message) {
+    if (!message) return;
+    const char *text = env->GetStringUTFChars(message, nullptr);
+    if (!text) return;
+    LOG("%s", text);
+    env->ReleaseStringUTFChars(message, text);
+}
+
+bool scheduleInstall(JNIEnv *env) {
+    auto cl = env->FindClass("java/lang/ClassLoader");
+    auto getSystem = env->GetStaticMethodID(cl, "getSystemClassLoader", "()Ljava/lang/ClassLoader;");
+    auto parent = env->CallStaticObjectMethod(cl, getSystem);
+    auto dexClass = env->FindClass("dalvik/system/InMemoryDexClassLoader");
+    auto ctor = env->GetMethodID(dexClass, "<init>", "(Ljava/nio/ByteBuffer;Ljava/lang/ClassLoader;)V");
+    auto buffer = env->NewDirectByteBuffer(const_cast<unsigned char *>(hook_dex), sizeof(hook_dex));
+    auto loader = env->NewObject(dexClass, ctor, buffer, parent);
+    if (!check(env, "startup loader") || !loader) return false;
+    auto load = env->GetMethodID(cl, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
+    auto name = env->NewStringUTF("com.axuan.vivomiuix.DeferredStartup");
+    auto startup = static_cast<jclass>(env->CallObjectMethod(loader, load, name));
+    if (!check(env, "startup helper") || !startup) return false;
+    JNINativeMethod natives[] = {
+        {const_cast<char *>("initialize"), const_cast<char *>("()Z"), reinterpret_cast<void *>(deferredInitialize)},
+        {const_cast<char *>("report"), const_cast<char *>("(Ljava/lang/String;)V"), reinterpret_cast<void *>(deferredReport)}
+    };
+    if (env->RegisterNatives(startup, natives, 2) != JNI_OK || !check(env, "startup JNI registration")) return false;
+    auto schedule = env->GetStaticMethodID(startup, "schedule", "()V");
+    if (!check(env, "startup entry") || !schedule) return false;
+    env->CallStaticVoidMethod(startup, schedule);
+    return check(env, "startup scheduling");
+}
+
 class Module : public zygisk::ModuleBase {
     zygisk::Api *api_ = nullptr;
     JNIEnv *env_ = nullptr;
@@ -241,7 +274,10 @@ public:
         if (!target_) api_->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
     }
     void postAppSpecialize(const zygisk::AppSpecializeArgs *) override {
-        if (target_) { LOG("Target Shell process pid=%d", getpid()); install(env_); }
+        if (target_) {
+            LOG("Target Shell process pid=%d; deferring shader setup until Application is ready", getpid());
+            if (!scheduleInstall(env_)) LOG("Unable to schedule shader initialization");
+        }
     }
     void preServerSpecialize(zygisk::ServerSpecializeArgs *) override {
         api_->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
@@ -253,6 +289,11 @@ public:
 extern "C" __attribute__((visibility("default"))) bool vivo_shader_fix_test(JNIEnv *env) {
     if (getuid() % 100000 != 2000) return false;
     return install(env);
+}
+
+extern "C" __attribute__((visibility("default"))) bool vivo_shader_fix_schedule_test(JNIEnv *env) {
+    if (getuid() % 100000 != 2000) return false;
+    return scheduleInstall(env);
 }
 
 REGISTER_ZYGISK_MODULE(Module)

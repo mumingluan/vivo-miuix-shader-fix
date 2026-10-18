@@ -12,6 +12,8 @@
 
 启动时通过反射识别 Shader 复制方法，并处理 Shader 与 vivo 深色模式控制类中的 Java 方法，不绑定方法名、固件版本或 ART 地址。整套 DEX 的调用分析只用于离线对照，不在管理器启动时执行。ART 布局使用两个类的实例 JNI 方法交叉检查，避免静态方法的类初始化跳板造成误判。
 
+修复在寄生管理器 Application 就绪后初始化，避开 Zygisk 特化阶段尚未稳定的 JNI 方法状态。启动等待最长 5 秒，完成或超时后退出；普通系统 Shell 不安装渲染钩子。
+
 ## 构建
 
 Windows、Python 3、JDK 21、Android SDK build-tools 36.0.0、NDK 29、CMake 3.28+、Ninja。设置 `JAVA_HOME`、`ANDROID_HOME`，运行 `python build.py`。
@@ -22,4 +24,4 @@ Windows、Python 3、JDK 21、Android SDK build-tools 36.0.0、NDK 29、CMake 3.
 
 原有代码采用 GPL-3.0-only，Copyright (C) 2026 Axuan。第三方代码遵循各自许可证，见 [THIRD_PARTY.md](THIRD_PARTY.md)。
 
-版本 `v1.3.1`，包名 / 模块 ID：`vivo_miuix_shader_fix`。
+版本 `v1.3.2`，包名 / 模块 ID：`vivo_miuix_shader_fix`。
